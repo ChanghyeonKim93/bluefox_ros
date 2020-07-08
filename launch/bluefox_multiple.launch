@@ -1,0 +1,17 @@
+<launch>
+    <arg name="binning_on" default="false"/>
+    <arg name="triggered_on" default="true"/>
+    <arg name="auto_exposure_control" default="false"/>
+    <arg name="auto_gain_control" default="false"/>
+    <arg name="expose_us" default="10000"/>
+    <arg name="frame_rate" default="20.0"/>
+
+    <node pkg="bluefox" name="bluefox_multiple_node" type="bluefox_multiple_node" output="screen">
+        <param name="binning_on" type="bool" value="$(arg binning_on)"/>
+        <param name="triggered_on" type="bool" value="$(arg triggered_on)"/>
+        <param name="aec_on" type="bool" value="$(arg auto_exposure_control)"/>
+        <param name="agc_on" type="bool" value="$(arg auto_gain_control)"/>
+	<param name="expose_us" type="int" value="$(arg expose_us)"/>
+        <param name="frame_rate" type="double" value="$(arg frame_rate)"/>
+    </node>
+</launch>
