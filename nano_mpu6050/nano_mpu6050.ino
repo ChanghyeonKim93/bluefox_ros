@@ -2,12 +2,15 @@
 #include "Wire.h"
 
 #define PIN_TRIGGER 7
-#define gravity 9.80655
 
 const int MPU_ADDR = 0x68; // I2C address of the MPU-6050. If AD0 pin is set to HIGH, the I2C address will be 0x69.
 int16_t accelerometer_x, accelerometer_y, accelerometer_z; // variables for accelerometer raw data
 int16_t gyro_x, gyro_y, gyro_z; // variables for gyro raw data
 int16_t temperature; // variables for temperature data
+
+uint16_t u_ax, u_ay, u_az;
+uint16_t u_gx, u_gy, u_gz;
+uint16_t u_temp;
 
 // ROS related 
 #include <ros.h>
@@ -75,14 +78,17 @@ void loop() {
   gyro_x      = Wire.read()<<8 | Wire.read(); // reading registers: 0x43 (GYRO_XOUT_H) and 0x44 (GYRO_XOUT_L)
   gyro_y      = Wire.read()<<8 | Wire.read(); // reading registers: 0x45 (GYRO_YOUT_H) and 0x46 (GYRO_YOUT_L)
   gyro_z      = Wire.read()<<8 | Wire.read(); // reading registers: 0x47 (GYRO_ZOUT_H) and 0x48 (GYRO_ZOUT_L)
-  
-  // count (200 Hz IMU. 20 Hz image)
-  cnt++;
-  if(cnt > 10){
-    cnt = 1;
-    digitalWrite(PIN_TRIGGER, HIGH);
-    digitalWrite(PIN_TRIGGER, LOW);
-  }
+
+  u_ax = (uint16_t) 32768 + (uint16_t) accelerometer_x;
+  u_ay = (uint16_t) 32768 + (uint16_t) accelerometer_y;
+  u_az = (uint16_t) 32768 + (uint16_t) accelerometer_z;
+
+  u_temp = (uint16_t) 32768 + (uint16_t) temperature;
+  u_gx = (uint16_t) 32768 + (uint16_t) gyro_x;
+  u_gy = (uint16_t) 32768 + (uint16_t) gyro_y;
+  u_gz = (uint16_t) 32768 + (uint16_t) gyro_z;
+
+
   // print out data
   
   /*Serial.print("aX = "); Serial.print(acc[0]);
@@ -94,18 +100,18 @@ void loop() {
   Serial.print(" | gY = "); Serial.print(gyro[1]);
   Serial.print(" | gZ = "); Serial.print(gyro[2]);
   Serial.println();*/
-
-  String AX = String(accelerometer_x);
-  String AY = String(accelerometer_y);
-  String AZ = String(accelerometer_z);
-  String GX = String(gyro_x);
-  String GY = String(gyro_y);
-  String GZ = String(gyro_z);
-  String tmp = String(temperature);
+  
+  String AX = String(u_ax);
+  String AY = String(u_ay);
+  String AZ = String(u_az);
+  String GX = String(u_gx);
+  String GY = String(u_gy);
+  String GZ = String(u_gz);
+  String tmp = String(u_temp);
  
-  String data = "A" + AX + "B"+ AY + "C" + AZ + "D" + GX + "E" + GY + "F" + GZ + "G" ;
+  String data = "$" + AX + "," + AY + "," + AZ + "," + GX + "," + GY + "," + GZ + "*" ;
   Serial.println(data);
-  int length = data.indexOf("G") +2;
+  int length = data.indexOf("*") + 2;
   char data_final[length+1];
   data.toCharArray(data_final, length+1);
 
@@ -114,7 +120,14 @@ void loop() {
     imu_msg.data = data_final;
     pub_imu.publish(&imu_msg);
     publisher_timer = millis(); // 200 Hz 
+    cnt++;
     nh.spinOnce();
+  }
+    // count (200 Hz IMU. 20 Hz image)
+  if(cnt > 5){
+    cnt = 1;
+    digitalWrite(PIN_TRIGGER, HIGH);
+    //digitalWrite(PIN_TRIGGER, LOW);
   }
   
   // delay 5 ms (for 200 Hz)
