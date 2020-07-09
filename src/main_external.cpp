@@ -1,7 +1,7 @@
 #include <iostream>
 #include <ros/ros.h>
 
-#include "bluefox_multiple_ros.h"
+#include "bluefox_multiple_ros_external.h"
 
 // trigger pin = digIn0+
 // trigger ground level is same with the Arduino ground level.

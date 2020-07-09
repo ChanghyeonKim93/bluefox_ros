@@ -18,7 +18,6 @@
 
 #include <apps/Common/exampleHelper.h>
 #include <mvIMPACT_CPP/mvIMPACT_acquire.h>
-#include <mvIMPACT_CPP/mvIMPACT_acquire_GenICam.h>
 
 #include <thread>
 #include <mutex>
@@ -110,7 +109,7 @@ agc_on_(agc_on), expose_us_(expose_us), frame_rate_(frame_rate)
     if(agc_on_ == true) cs_->autoGainControl.write(agcOn); // auto gain ?
 
     cout << " / expose_ctrl?: "<<cs_->autoExposeControl.read();
-    cout << " / freq.: "<<cs_->frameDelay_us.read()<<" [Hz]" << endl;
+    cout << " / frame delay.: "<<cs_->frameDelay_us.read()<<" [Hz]" << endl;
     //std::cout<<"exposure time: "<<cs_->expose_us.read()<< "[us]"<<std::endl;
 
     if(trigger_on_ == true) setHardwareTriggeredSnapshotMode();
@@ -172,7 +171,7 @@ void BlueFox::setFrameRate(const int& frame_rate){
 
 
 bool BlueFox::grabImage(sensor_msgs::Image &image_msg){
-   cout << " image msg is received.\n";
+
 
   // NOTE: A request object is locked for the driver whenever the corresponding
   // wait function returns a valid request object.
@@ -184,7 +183,7 @@ bool BlueFox::grabImage(sensor_msgs::Image &image_msg){
     int error_msg = fi_->imageRequestSingle();
     // if(error_msg == mvIMPACT::acquire::DEV_NO_FREE_REQUEST_AVAILABLE) std::cout<<"no available\n";
 
-    int request_nr = fi_->imageRequestWaitFor(100);
+    int request_nr = fi_->imageRequestWaitFor(1000);
     // if failed,
     if(!fi_->isRequestNrValid( request_nr )) {
         // std::cout<<"["<<frame_id_<<"] waits for new trigger signal..."<<std::endl;
@@ -196,10 +195,11 @@ bool BlueFox::grabImage(sensor_msgs::Image &image_msg){
     // Check if request is ok
     if (!request_->isOK()) {
         // need to unlock here because the request is valid even if it is not ok
-        std::cout<< " image is not received."<<std::endl;
+        std::cout<< "ERROR: image receiving fails!!"<<std::endl;
         fi_->imageRequestUnlock(request_nr);
         return false;
     }
+
     ++cnt_img;
     std::cout<< "  cam ["<< frame_id_<< "] rcvd! # of img [" << cnt_img <<"] ";
 
@@ -228,9 +228,9 @@ bool BlueFox::grabImage(sensor_msgs::Image &image_msg){
     //   << stat_->errorCount.readS()
     // << ", " << stat_->captureTime_s.name() << ": " 
     //   << stat_->captureTime_s.readS() << std::endl;
-    std::cout<<" expose_us: "<<request_->infoExposeTime_us.read()<<" [us]"<<std::endl;
+    std::cout<<" expose_us: "<<request_->infoExposeTime_us.read()<<" [us], ";
     std::cout<<" gain_dB: "<<request_->infoGain_dB.read()<<" [dB]"<<std::endl;
-    // std::cout<<"exposure time: "<<cs_->expose_us.read()<< "[us]"<<std::endl;
+
     // Release capture request
     fi_->imageRequestUnlock(request_nr);
     return true;
