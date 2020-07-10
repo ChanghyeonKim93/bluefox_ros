@@ -15,11 +15,18 @@ uint16_t u_temp;
 // ROS related 
 #include <ros.h>
 #include <std_msgs/String.h>
+#include <improved_topic_logger/imu_serial.h> // custom message
 
 // node handler
-std_msgs::String imu_msg;
-ros::Publisher pub_imu("/imu/mpu_6050", &imu_msg);
 ros::NodeHandle nh;
+improved_topic_logger::imu_serial imu_msg;
+ros::Publisher pub_imu("/mcu/mpu6050", &imu_msg);
+
+volatile unsigned long trigger_time = 0;
+volatile unsigned long imu_time = 0;
+unsigned long time_sec = 0;
+unsigned long time_nsec = 0;
+volatile unsigned long triggerCounter = 0;
 
 void setup() {
   pinMode(PIN_TRIGGER, OUTPUT);
@@ -55,13 +62,15 @@ void setup() {
   Wire.endTransmission(true);
 
   // ROS initialization
-    nh.getHardware()->setBaud(115200);
+  nh.getHardware()->setBaud(115200);
 
   nh.initNode();
   nh.advertise(pub_imu);
 }
 
-int cnt = 1;
+uint8_t cnt = 1;
+uint32_t cnt_imu = 0;
+uint32_t cnt_trigger = 0;
 long publisher_timer;
 
 void loop() {
@@ -78,6 +87,15 @@ void loop() {
   gyro_x      = Wire.read()<<8 | Wire.read(); // reading registers: 0x43 (GYRO_XOUT_H) and 0x44 (GYRO_XOUT_L)
   gyro_y      = Wire.read()<<8 | Wire.read(); // reading registers: 0x45 (GYRO_YOUT_H) and 0x46 (GYRO_YOUT_L)
   gyro_z      = Wire.read()<<8 | Wire.read(); // reading registers: 0x47 (GYRO_ZOUT_H) and 0x48 (GYRO_ZOUT_L)
+
+  /*u_ax = (uint16_t) 32768 + (uint16_t) accelerometer_x;
+  u_ay = (uint16_t) 32768 + (uint16_t) accelerometer_y;
+  u_az = (uint16_t) 32768 + (uint16_t) accelerometer_z;
+
+  u_temp = (uint16_t) 32768 + (uint16_t) temperature;
+  u_gx = (uint16_t) 32768 + (uint16_t) gyro_x;
+  u_gy = (uint16_t) 32768 + (uint16_t) gyro_y;
+  u_gz = (uint16_t) 32768 + (uint16_t) gyro_z;*/
 
   u_ax = (uint16_t) 32768 + (uint16_t) accelerometer_x;
   u_ay = (uint16_t) 32768 + (uint16_t) accelerometer_y;
@@ -110,25 +128,33 @@ void loop() {
   String tmp = String(u_temp);
  
   String data = "$" + AX + "," + AY + "," + AZ + "," + GX + "," + GY + "," + GZ + "*" ;
-  Serial.println(data);
+  // Serial.println(data);
   int length = data.indexOf("*") + 2;
   char data_final[length+1];
   data.toCharArray(data_final, length+1);
 
-  if(millis() > publisher_timer){
+  if(micros() > publisher_timer){
     // step 1: request reading from sensor
+    publisher_timer = micros() + 5000; // 200 Hz
+    imu_msg.seq  = cnt_imu;
     imu_msg.data = data_final;
-    pub_imu.publish(&imu_msg);
-    publisher_timer = millis(); // 200 Hz 
-    cnt++;
-    nh.spinOnce();
-  }
+    ++cnt;
+    ++cnt_imu;
+
     // count (200 Hz IMU. 20 Hz image)
-  if(cnt > 5){
-    cnt = 1;
-    digitalWrite(PIN_TRIGGER, HIGH);
-    //digitalWrite(PIN_TRIGGER, LOW);
+    if(cnt > 10){
+      cnt = 1;
+      digitalWrite(PIN_TRIGGER, HIGH);
+      digitalWrite(PIN_TRIGGER, LOW);
+      imu_msg.flag_trigger = 1;
+    }
+    else{ // non-triggered signal
+      imu_msg.flag_trigger = 0;      
+    }
+    pub_imu.publish(&imu_msg);
+     nh.spinOnce();
   }
+
   
   // delay 5 ms (for 200 Hz)
   
