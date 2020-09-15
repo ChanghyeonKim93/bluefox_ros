@@ -51,6 +51,7 @@ class BlueFox {
     bool grabImage(sensor_msgs::Image &image_msg);
     void setHardwareTriggeredSnapshotMode(bool onoff);
 
+    void setBinningMode(bool onoff);
     void setExposureTime(const int& expose_us);
     void setGain(const int& gain);
     void setFrameRate(const int& frame_rate);
@@ -105,8 +106,7 @@ agc_on_(agc_on), hdr_on_(hdr_on), expose_us_(expose_us), frame_rate_(frame_rate)
 
     //cs_->autoControlMode.write(acmStandard);
     //cs_->triggerMode.write(ctmContinuous); // ctmOnDemand ctmContinuous
-    if(binning_on_ == true) cs_->binningMode.write(cbmBinningHV); // cbmBinningHV
-    else cs_->binningMode.write(cbmOff); // cbmOff: no binning. 
+    setBinningMode(binning_on_);
 
     cs_->expose_us.write(expose_us_);
     cs_->frameDelay_us.write(0);
@@ -159,6 +159,11 @@ BlueFox::~BlueFox() {
     delete stat_;
     dev_->close();
   }
+};
+
+void BlueFox::setBinningMode(bool onoff){
+    if(onoff == true) cs_->binningMode.write(cbmBinningHV); // cbmBinningHV
+    else cs_->binningMode.write(cbmOff); // cbmOff: no binning. 
 };
 
 void BlueFox::setHardwareTriggeredSnapshotMode(bool onoff) {
