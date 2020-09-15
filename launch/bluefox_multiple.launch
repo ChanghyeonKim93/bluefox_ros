@@ -16,4 +16,9 @@
 	    <param name="expose_us" type="int" value="$(arg expose_us)"/>
         <param name="frame_rate" type="double" value="$(arg frame_rate)"/>
     </node>
+
+    <node pkg="rqt_reconfigure" type="rqt_reconfigure" name="rqt_reconfigure" output="screen">
+    </node>
+    <node pkg="rqt_image_view" type="rqt_image_view" name="rqt_image_view" output="screen">
+    </node>
 </launch>

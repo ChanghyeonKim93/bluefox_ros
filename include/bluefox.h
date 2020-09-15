@@ -49,14 +49,16 @@ class BlueFox {
       int expose_us, double frame_rate);
     ~BlueFox();
     bool grabImage(sensor_msgs::Image &image_msg);
-    void setHardwareTriggeredSnapshotMode(bool onoff);
 
+    void setTriggerMode(bool onoff);
     void setBinningMode(bool onoff);
+    void setAutoExposureMode(bool onoff);
+    void setAutoGainMode(bool onoff);
     void setExposureTime(const int& expose_us);
     void setGain(const int& gain);
     void setFrameRate(const int& frame_rate);
-    void setWhiteBalance(
-      const int& wbp_mode, double& r_gain, double& g_gain, double& b_gain);
+    void setWhiteBalance(const int& wbp_mode, double r_gain, double g_gain, double b_gain);
+
     void setHighDynamicRange(bool hdr_onoff);
 
 inline double getExposureTime(){return cs_->expose_us.read();};
@@ -104,22 +106,20 @@ agc_on_(agc_on), hdr_on_(hdr_on), expose_us_(expose_us), frame_rate_(frame_rate)
     stat_ = new mvIMPACT::acquire::Statistics(dev_);
     improc_= new mvIMPACT::acquire::ImageProcessing(dev_); // for White balance
 
-    //cs_->autoControlMode.write(acmStandard);
-    //cs_->triggerMode.write(ctmContinuous); // ctmOnDemand ctmContinuous
-    setBinningMode(binning_on_);
-
-    cs_->expose_us.write(expose_us_);
+    // no delay from the hardware query moment.
     cs_->frameDelay_us.write(0);
 
-    if(aec_on_ == true) cs_->autoExposeControl.write(aecOn); // auto expose ?
-    if(agc_on_ == true) cs_->autoGainControl.write(agcOn); // auto gain ?
+    
+    setBinningMode(binning_on_);// binning mode setting    
+    setExposureTime(expose_us_);// set exposure.
+    setAutoExposureMode(aec_on_);
+    setAutoGainMode(agc_on_);
 
     cout << " / expose_ctrl?: "<<cs_->autoExposeControl.read();
     cout << " / frame delay.: "<<cs_->frameDelay_us.read()<<" [Hz]" << endl;
-    //std::cout<<"exposure time: "<<cs_->expose_us.read()<< "[us]"<<std::endl;
+    std::cout<<" / exposure time: "<<cs_->expose_us.read()<< "[us]"<<std::endl;
 
-    if(trigger_on_ == true) setHardwareTriggeredSnapshotMode(true);
-    else cs_->triggerMode.write(ctmContinuous);
+    setTriggerMode(trigger_on_);
 
     std::cout<<"exposure time: "<<cs_->expose_us.read()<< "[us]"<<std::endl;
     std::cout<<"Frame rate: "
@@ -133,11 +133,10 @@ agc_on_(agc_on), hdr_on_(hdr_on), expose_us_(expose_us), frame_rate_(frame_rate)
     // white balance
     // user defined white balance parameters
     // wbpTungsten, wbpHalogen, wbpFluorescent, wbpDayLight, wbpPhotoFlash, wbpBlueSky, wbpUser1.
-      improc_->whiteBalance.write(wbpDayLight);
       cout << "wbps: "<<
       wbpTungsten <<","<<  wbpHalogen <<","<< wbpFluorescent<<","<<  wbpDayLight 
       <<","<<  wbpPhotoFlash<<","<<  wbpBlueSky<<","<<  wbpUser1 << "\n";
-    // TODO: setWhiteBalance(); custom function
+    setWhiteBalance(wbpDayLight,0,0,0); // default : dayLight
 
     //set HDR mode
     if(hdr_on_){
@@ -166,7 +165,7 @@ void BlueFox::setBinningMode(bool onoff){
     else cs_->binningMode.write(cbmOff); // cbmOff: no binning. 
 };
 
-void BlueFox::setHardwareTriggeredSnapshotMode(bool onoff) {
+void BlueFox::setTriggerMode(bool onoff) {
   if(onoff == true){
     cout<<"Set ["<<serial_<<"] in trigger mode."<<endl;
     // trigger mode
@@ -175,16 +174,6 @@ void BlueFox::setHardwareTriggeredSnapshotMode(bool onoff) {
     cs_->triggerSource.write(ctsDigIn0);
     cs_->triggerMode.write(ctmOnHighLevel); // ctmOnRisingEdge ctmOnHighLevel
     cs_->frameDelay_us.write(0);
-
-    //cs_->imageRequestTimeout_ms.write(0); // infinite trigger timeout
-   
-    //cs_->autoExposeControl.write(aecOff); // auto expose ?
-    //cs_->autoGainControl.write(agcOff); // auto gain ?
-    //cs_->exposeMode.write(cemStandard);
-    //cs_->binningMode.write(cbmOff); // cbmOff: no binning. 
-    //cs_->expose_us.write(10000);
-    // cbmBinningHV: half resolution binning.
-
     cout<<"  trigger source: "<<cs_->triggerSource.read();
     cout<<" / trigger mode: "<<cs_->triggerMode.read();
     cout<<" / exposure time: "<<cs_->expose_us.read()<< "[us]" << endl;
@@ -198,6 +187,16 @@ void BlueFox::setExposureTime(const int& expose_us){
   cs_->expose_us.write(expose_us);
   std::cout<<"set exposure time: "<<cs_->expose_us.read()<< "[us]"<<std::endl;
 };
+
+void BlueFox::setAutoExposureMode(bool onoff){
+  if(onoff) cs_->autoExposeControl.write(aecOn);
+  else cs_->autoExposeControl.write(aecOff);
+};
+void BlueFox::setAutoGainMode(bool onoff){
+  if(onoff) cs_->autoGainControl.write(agcOn);
+  else cs_->autoGainControl.write(agcOff);
+};
+
 void BlueFox::setGain(const int& gain){
   cs_->gain_dB.write(gain);
 };
@@ -205,9 +204,32 @@ void BlueFox::setFrameRate(const int& frame_rate){
   cs_->frameDelay_us.write(0);
 };
 
-void BlueFox::setWhiteBalance(const int& wbp_mode, double& r_gain, double& g_gain, double& b_gain){
-  improc_->whiteBalance.write(wbpFluorescent);
-  if(wbp_mode == wbpFluorescent){
+void BlueFox::setWhiteBalance(const int& wbp_mode, double r_gain, double g_gain, double b_gain){
+  // white balance
+    // user defined white balance parameters
+    // wbpTungsten, wbpHalogen, wbpFluorescent, wbpDayLight, wbpPhotoFlash, wbpBlueSky, wbpUser1.
+
+  if(wbp_mode == -1){
+  }
+  else if(wbp_mode == wbpTungsten){
+    improc_->whiteBalance.write(wbpTungsten);
+  }
+  else if(wbp_mode == wbpHalogen){
+    improc_->whiteBalance.write(wbpHalogen);
+  }
+  else if(wbp_mode == wbpFluorescent){
+    improc_->whiteBalance.write(wbpFluorescent);
+  }
+  else if(wbp_mode == wbpDayLight){
+    improc_->whiteBalance.write(wbpDayLight);
+  }
+  else if(wbp_mode == wbpPhotoFlash){
+    improc_->whiteBalance.write(wbpPhotoFlash);
+  }
+  else if(wbp_mode == wbpBlueSky){
+    improc_->whiteBalance.write(wbpBlueSky);
+  }
+  else if(wbp_mode == wbpUser1){
     auto wbp_set = improc_->getWBUserSetting(0);
     wbp_set.redGain.write(r_gain);
     wbp_set.greenGain.write(g_gain);

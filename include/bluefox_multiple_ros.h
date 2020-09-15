@@ -124,16 +124,47 @@ void BlueFOX_MULTIPLE_ROS::callbackDynReconfig(bluefox::bluefoxDynConfig &config
         
     if(config.trigger_mode){
         for(int i = 0; i < n_devs_; i++)
-            bluefoxs_[i]->setHardwareTriggeredSnapshotMode(true);
+            bluefoxs_[i]->setTriggerMode(true);
     }
     else{
         for(int i = 0; i < n_devs_; i++)
-            bluefoxs_[i]->setHardwareTriggeredSnapshotMode(false);
+            bluefoxs_[i]->setTriggerMode(false);
     }
     
     if(config.binning_mode){
+        for(int i = 0; i < n_devs_; i++)
+            bluefoxs_[i]->setBinningMode(true);
     }
     else{
+        for(int i = 0; i < n_devs_; i++)
+            bluefoxs_[i]->setBinningMode(false);
+    }
+
+    if(config.aec){
+        for(int i = 0; i < n_devs_; i++)
+            bluefoxs_[i]->setAutoExposureMode(true);
+    }
+    else{
+        for(int i = 0; i < n_devs_; i++)
+            bluefoxs_[i]->setAutoExposureMode(false);
+    }
+
+    if(config.agc){
+        for(int i = 0; i < n_devs_; i++)
+            bluefoxs_[i]->setAutoGainMode(true);
+    }
+    else{
+        for(int i = 0; i < n_devs_; i++)
+            bluefoxs_[i]->setAutoGainMode(false);
+    }
+
+    if(config.wbp == -1){ // off
+       for(int i = 0; i < n_devs_; i++)
+            bluefoxs_[i]->setWhiteBalance(config.wbp,0,0,0);
+    }
+    else{ // on! each mode...
+        for(int i = 0; i < n_devs_; i++)
+            bluefoxs_[i]->setWhiteBalance(config.wbp,0,0,0);
     }
 
     ROS_INFO("Parameter reconfigured.\n");
