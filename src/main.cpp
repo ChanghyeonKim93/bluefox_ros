@@ -8,6 +8,7 @@
 void callbackDynReconfig(bluefox::bluefoxDynConfig &config, uint32_t lvl){
     ROS_INFO("Reconfigure Request: %d",config.int_param);
 }
+
 // trigger pin = digIn0+
 // trigger ground level is same with the Arduino ground level.
 // TODO: recognize serial numbers of multiple cameras and grant specific "id".
@@ -23,26 +24,28 @@ int main(int argc, char **argv) {
     ros::NodeHandle nh("~");
 
     bool binning_on   = false;
-    bool triggered_on = false;
+    bool triggered_on = true;
     bool aec_on       = false; // auto exposure control on / off
     bool agc_on       = false; // auto gain control on / off
+    bool hdr_on       = false;
     int expose_us     = 11000; // it is also max. exposure for auto exposure control.
-    double frame_rate = 30.0; // frame rate (full resolution: up to 30 Hz)
+    double frame_rate = 60.0; // frame rate (full resolution: up to 30 Hz)
 
     ros::param::get("~binning_on", binning_on);
 	ros::param::get("~triggered_on", triggered_on);
 	ros::param::get("~aec_on", aec_on);
 	ros::param::get("~agc_on", agc_on);
+    ros::param::get("~hdr_on", hdr_on);
 	ros::param::get("~expose_us", expose_us);
     ros::param::get("~frame_rate", frame_rate);
 
     BlueFOX_MULTIPLE_ROS *bluefoxs = 
         new BlueFOX_MULTIPLE_ROS(nh, binning_on, triggered_on, 
-        aec_on, agc_on, expose_us, frame_rate);
+        aec_on, agc_on, hdr_on, expose_us, frame_rate);
     
     while(ros::ok())
     {
-	bluefoxs->Publish();
+	    bluefoxs->Publish();
         ros::spinOnce();
     }
 

@@ -32,7 +32,7 @@ class BlueFOX_MULTIPLE_ROS {
 public:
     explicit BlueFOX_MULTIPLE_ROS(
         ros::NodeHandle& nh, bool binning_on, bool triggered_on,
-        bool aec_on, bool agc_on, int expose_us, double frame_rate)
+        bool aec_on, bool agc_on, bool hdr_on, int expose_us, double frame_rate)
     : nh_(nh), it_(nh_)
     {
         n_devs_ = getValidDevices(devMgr_, validDevices_);
@@ -42,7 +42,7 @@ public:
             std::cout << "[" << i << "]: ";
             BlueFox* bluefox_temp = 
             new BlueFox(validDevices_[i], i, binning_on, triggered_on, 
-                        aec_on, agc_on, expose_us, frame_rate);
+                        aec_on, agc_on,hdr_on, expose_us, frame_rate);
             std::string topic_name = "/" + std::to_string(i) + "/image_raw";
 
             bluefoxs_.push_back(bluefox_temp);

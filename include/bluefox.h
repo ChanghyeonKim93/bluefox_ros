@@ -45,7 +45,7 @@ string BayerPatternToEncoding(const TBayerMosaicParity& bayer_pattern,
 class BlueFox {
   public:
     BlueFox(mvIMPACT::acquire::Device* dev, int cam_id, 
-      bool binning_on, bool triggered_on, bool aec_on, bool agc_on, 
+      bool binning_on, bool triggered_on, bool aec_on, bool agc_on, bool hdr_on,
       int expose_us, double frame_rate);
     ~BlueFox();
     bool grabImage(sensor_msgs::Image &image_msg);
@@ -69,6 +69,7 @@ inline double getFrameRate(){return cs_->frameDelay_us.read();};
     bool trigger_on_; 
     bool aec_on_;
     bool agc_on_;
+    bool hdr_on_;
     int expose_us_;
     double frame_rate_;
     int cnt_img;
@@ -87,9 +88,9 @@ inline double getFrameRate(){return cs_->frameDelay_us.read();};
 
 /* IMPLEMENTATION */
 BlueFox::BlueFox(mvIMPACT::acquire::Device* dev, int cam_id, bool binning_on, 
-bool trigger_on, bool aec_on, bool agc_on, int expose_us, double frame_rate) 
+bool trigger_on, bool aec_on, bool agc_on, bool hdr_on, int expose_us, double frame_rate) 
 : dev_(dev), binning_on_(binning_on), trigger_on_(trigger_on), aec_on_(aec_on), 
-agc_on_(agc_on), expose_us_(expose_us), frame_rate_(frame_rate)
+agc_on_(agc_on), hdr_on_(hdr_on), expose_us_(expose_us), frame_rate_(frame_rate)
 {
     cnt_img = 0;
     
@@ -136,7 +137,7 @@ agc_on_(agc_on), expose_us_(expose_us), frame_rate_(frame_rate)
     // TODO: setWhiteBalance(); custom function
 
     //set HDR mode
-    if(0){
+    if(hdr_on_){
       auto &hdr_control = cs_->getHDRControl();
       if(!hdr_control.isAvailable()){
         cout << " HDR control is not supported.\n";
