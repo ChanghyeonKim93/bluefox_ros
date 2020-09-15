@@ -3,8 +3,8 @@
     <arg name="triggered_on" default="true"/>
     <arg name="auto_exposure_control" default="false"/>
     <arg name="auto_gain_control" default="false"/>
-    <arg name="expose_us" default="6000"/>
-    <arg name="frame_rate" default="20.0"/>
+    <arg name="expose_us" default="20000"/>
+    <arg name="frame_rate" default="30.0"/>
 
     <node pkg="bluefox" name="bluefox_multiple_node" type="bluefox_multiple_node" output="screen">
         <param name="binning_on" type="bool" value="$(arg binning_on)"/>

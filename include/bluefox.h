@@ -54,6 +54,9 @@ class BlueFox {
     void setExposureTime(const int& expose_us);
     void setGain(const int& gain);
     void setFrameRate(const int& frame_rate);
+    void setWhiteBalance(
+      const int& wbp_mode, double& r_gain, double& g_gain, double& b_gain);
+    void setHighDynamicRange(bool& hdr_onoff);
 
 inline double getExposureTime(){return cs_->expose_us.read();};
 inline double getGain(){return cs_->gain_dB.read();};
@@ -79,6 +82,7 @@ inline double getFrameRate(){return cs_->frameDelay_us.read();};
     mvIMPACT::acquire::ImageProcessing *img_proc_{nullptr};
     mvIMPACT::acquire::CameraSettingsBlueFOX *cs_{nullptr};
     mvIMPACT::acquire::Statistics *stat_{nullptr};
+    mvIMPACT::acquire::ImageProcessing *improc_{nullptr};
 };
 
 /* IMPLEMENTATION */
@@ -96,6 +100,7 @@ agc_on_(agc_on), expose_us_(expose_us), frame_rate_(frame_rate)
     cs_   = new mvIMPACT::acquire::CameraSettingsBlueFOX(dev_);
     fi_   = new mvIMPACT::acquire::FunctionInterface(dev_);
     stat_ = new mvIMPACT::acquire::Statistics(dev_);
+    improc_= new mvIMPACT::acquire::ImageProcessing(dev_); // for White balance
 
     //cs_->autoControlMode.write(acmStandard);
     //cs_->triggerMode.write(ctmContinuous); // ctmOnDemand ctmContinuous
@@ -123,7 +128,24 @@ agc_on_(agc_on), expose_us_(expose_us), frame_rate_(frame_rate)
       << stat_->errorCount.readS()
     << ", " << stat_->captureTime_s.name() << ": " 
       << stat_->captureTime_s.readS() << std::endl;
-   
+
+    // white balance
+    // user defined white balance parameters
+    // wbpTungsten, wbpHalogen, wbpFluorescent, wbpDayLight, wbpPhotoFlash, wbpBlueSky, wbpUser1.
+      improc_->whiteBalance.write(wbpDayLight);
+    // TODO: setWhiteBalance(); custom function
+
+    //set HDR mode
+    if(0){
+      auto &hdr_control = cs_->getHDRControl();
+      if(!hdr_control.isAvailable()){
+        cout << " HDR control is not supported.\n";
+      }
+      // cHDRmFixed0,cHDRmFixed1,cHDRmFixed2,cHDRmFixed3,cHDRmFixed4,cHDRmFixed5,cHDRmFixed6,cHDRmUser
+      hdr_control.HDREnable.write(bTrue); // hdr on.
+      hdr_control.HDRMode.write(cHDRmFixed0);
+    }
+    
 };
 
 BlueFox::~BlueFox() {
@@ -167,6 +189,31 @@ void BlueFox::setGain(const int& gain){
 };
 void BlueFox::setFrameRate(const int& frame_rate){
   cs_->frameDelay_us.write(0);
+};
+
+void BlueFox::setWhiteBalance(const int& wbp_mode, double& r_gain, double& g_gain, double& b_gain){
+  improc_->whiteBalance.write(wbpFluorescent);
+  if(wbp_mode == wbpFluorescent){
+    auto wbp_set = improc_->getWBUserSetting(0);
+    wbp_set.redGain.write(r_gain);
+    wbp_set.greenGain.write(g_gain);
+    wbp_set.blueGain.write(b_gain);
+  }
+};
+
+void BlueFox::setHighDynamicRange(bool& hdr_onoff){
+  //set HDR mode
+  auto &hdr_control = cs_->getHDRControl();
+  if(!hdr_control.isAvailable()){
+    hdr_onoff = false;
+    cout << " HDR control is not supported.\n";
+    return;
+  }
+  // cHDRmFixed0,cHDRmFixed1,cHDRmFixed2,cHDRmFixed3,cHDRmFixed4,cHDRmFixed5,cHDRmFixed6,cHDRmUser
+  hdr_control.HDREnable.write(bTrue); // set HDR on/off.
+  if(hdr_onoff){
+    hdr_control.HDRMode.write(cHDRmFixed0);
+  }
 };
 
 
