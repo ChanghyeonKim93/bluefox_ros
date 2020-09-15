@@ -25,6 +25,10 @@
 
 #include "bluefox.h"
 
+#include "dynamic_reconfigure/server.h"
+#include "bluefox/bluefoxDynConfig.h"
+
+
 using namespace std;
 using namespace mvIMPACT::acquire;
 
@@ -41,7 +45,7 @@ public:
         for(int i = 0; i < n_devs_; i++){
             std::cout << "[" << i << "]: ";
             BlueFox* bluefox_temp = 
-            new BlueFox(validDevices_[i], i, binning_on, triggered_on, 
+                        new BlueFox(validDevices_[i], i, binning_on, triggered_on, 
                         aec_on, agc_on,hdr_on, expose_us, frame_rate);
             std::string topic_name = "/" + std::to_string(i) + "/image_raw";
 
@@ -51,13 +55,20 @@ public:
             image_publishers_.push_back(camera_pub_);
             img_msgs_.push_back(sensor_msgs::Image());
         }
+
+        // dynamic reconfigure for real-time hardware parameter settings
+        f = boost::bind(&BlueFOX_MULTIPLE_ROS::callbackDynReconfig, this, _1, _2);
+        server.setCallback(f);
+
         cout << "Please wait for setting cameras...\n";
         ros::Duration(1.0).sleep();
         cout << "camera setting is done.\n";
-    };    
+    }; 
+
     ~BlueFOX_MULTIPLE_ROS();
 
     void Publish();
+    void callbackDynReconfig(bluefox::bluefoxDynConfig &config, uint32_t lvl);
 
 
 private:
@@ -77,6 +88,9 @@ private:
 
     ros::Subscriber sub_msg_;
     std_msgs::Int32 msg_;
+
+    dynamic_reconfigure::Server<bluefox::bluefoxDynConfig> server;
+    dynamic_reconfigure::Server<bluefox::bluefoxDynConfig>::CallbackType f;
 };
 
 /* IMPLEMENTATION */
@@ -95,4 +109,33 @@ void BlueFOX_MULTIPLE_ROS::Publish() {
         image_publishers_[i].publish(img_msgs_[i]);
     }
 };
+
+
+void BlueFOX_MULTIPLE_ROS::callbackDynReconfig(bluefox::bluefoxDynConfig &config, uint32_t lvl) {
+    if(config.hdr){
+        for(int i = 0; i < n_devs_; i++)
+            bluefoxs_[i]->setHighDynamicRange(true);
+        cout << " DYNRECONFIG HDR:" <<  config.hdr << "\n";
+    }
+    else{
+        for(int i = 0; i < n_devs_; i++)
+            bluefoxs_[i]->setHighDynamicRange(false);
+    }
+        
+    if(config.trigger_mode){
+        for(int i = 0; i < n_devs_; i++)
+            bluefoxs_[i]->setHardwareTriggeredSnapshotMode(true);
+    }
+    else{
+        for(int i = 0; i < n_devs_; i++)
+            bluefoxs_[i]->setHardwareTriggeredSnapshotMode(false);
+    }
+    
+    if(config.binning_mode){
+    }
+    else{
+    }
+
+    ROS_INFO("Parameter reconfigured.\n");
+}
 #endif

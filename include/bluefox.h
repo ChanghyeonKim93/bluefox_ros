@@ -49,14 +49,14 @@ class BlueFox {
       int expose_us, double frame_rate);
     ~BlueFox();
     bool grabImage(sensor_msgs::Image &image_msg);
-    void setHardwareTriggeredSnapshotMode();
+    void setHardwareTriggeredSnapshotMode(bool onoff);
 
     void setExposureTime(const int& expose_us);
     void setGain(const int& gain);
     void setFrameRate(const int& frame_rate);
     void setWhiteBalance(
       const int& wbp_mode, double& r_gain, double& g_gain, double& b_gain);
-    void setHighDynamicRange(bool& hdr_onoff);
+    void setHighDynamicRange(bool hdr_onoff);
 
 inline double getExposureTime(){return cs_->expose_us.read();};
 inline double getGain(){return cs_->gain_dB.read();};
@@ -118,7 +118,7 @@ agc_on_(agc_on), hdr_on_(hdr_on), expose_us_(expose_us), frame_rate_(frame_rate)
     cout << " / frame delay.: "<<cs_->frameDelay_us.read()<<" [Hz]" << endl;
     //std::cout<<"exposure time: "<<cs_->expose_us.read()<< "[us]"<<std::endl;
 
-    if(trigger_on_ == true) setHardwareTriggeredSnapshotMode();
+    if(trigger_on_ == true) setHardwareTriggeredSnapshotMode(true);
     else cs_->triggerMode.write(ctmContinuous);
 
     std::cout<<"exposure time: "<<cs_->expose_us.read()<< "[us]"<<std::endl;
@@ -134,6 +134,9 @@ agc_on_(agc_on), hdr_on_(hdr_on), expose_us_(expose_us), frame_rate_(frame_rate)
     // user defined white balance parameters
     // wbpTungsten, wbpHalogen, wbpFluorescent, wbpDayLight, wbpPhotoFlash, wbpBlueSky, wbpUser1.
       improc_->whiteBalance.write(wbpDayLight);
+      cout << "wbps: "<<
+      wbpTungsten <<","<<  wbpHalogen <<","<< wbpFluorescent<<","<<  wbpDayLight 
+      <<","<<  wbpPhotoFlash<<","<<  wbpBlueSky<<","<<  wbpUser1 << "\n";
     // TODO: setWhiteBalance(); custom function
 
     //set HDR mode
@@ -158,8 +161,9 @@ BlueFox::~BlueFox() {
   }
 };
 
-void BlueFox::setHardwareTriggeredSnapshotMode() {
-  cout<<"Set ["<<serial_<<"] in trigger mode."<<endl;
+void BlueFox::setHardwareTriggeredSnapshotMode(bool onoff) {
+  if(onoff == true){
+    cout<<"Set ["<<serial_<<"] in trigger mode."<<endl;
     // trigger mode
     // ctsDigIn0 : digitalInput 0 as trigger source
     // In this application an image is triggered by a rising edge. (over +3.3 V) 
@@ -179,6 +183,10 @@ void BlueFox::setHardwareTriggeredSnapshotMode() {
     cout<<"  trigger source: "<<cs_->triggerSource.read();
     cout<<" / trigger mode: "<<cs_->triggerMode.read();
     cout<<" / exposure time: "<<cs_->expose_us.read()<< "[us]" << endl;
+  }
+  else{
+    cs_->triggerMode.write(ctmContinuous);
+  }
 };
 
 void BlueFox::setExposureTime(const int& expose_us){
@@ -202,7 +210,7 @@ void BlueFox::setWhiteBalance(const int& wbp_mode, double& r_gain, double& g_gai
   }
 };
 
-void BlueFox::setHighDynamicRange(bool& hdr_onoff){
+void BlueFox::setHighDynamicRange(bool hdr_onoff){
   //set HDR mode
   auto &hdr_control = cs_->getHDRControl();
   if(!hdr_control.isAvailable()){
@@ -211,9 +219,12 @@ void BlueFox::setHighDynamicRange(bool& hdr_onoff){
     return;
   }
   // cHDRmFixed0,cHDRmFixed1,cHDRmFixed2,cHDRmFixed3,cHDRmFixed4,cHDRmFixed5,cHDRmFixed6,cHDRmUser
-  hdr_control.HDREnable.write(bTrue); // set HDR on/off.
   if(hdr_onoff){
+    hdr_control.HDREnable.write(bTrue); // set HDR on/off.
     hdr_control.HDRMode.write(cHDRmFixed0);
+  }
+  else{
+    hdr_control.HDREnable.write(bFalse); // set HDR on/off.
   }
 };
 
@@ -249,7 +260,7 @@ bool BlueFox::grabImage(sensor_msgs::Image &image_msg){
     }
 
     ++cnt_img;
-    std::cout<< "  cam ["<< frame_id_<< "] rcvd! # of img [" << cnt_img <<"] ";
+    //std::cout<< "  cam ["<< frame_id_<< "] rcvd! # of img [" << cnt_img <<"] ";
 
     std::string encoding;
     const auto bayer_mosaic_parity = request_->imageBayerMosaicParity.read();
@@ -265,8 +276,7 @@ bool BlueFox::grabImage(sensor_msgs::Image &image_msg){
                          request_->imageWidth.read(),
                          request_->imageLinePitch.read(),
                          request_->imageData.read());
-    std::cout<<" sz: [" << request_->imageWidth.read()
-    << "x" << request_->imageHeight.read()<<"]";
+    //std::cout<<" sz: [" << request_->imageWidth.read() << "x" << request_->imageHeight.read()<<"]";
 
     // std::cout<<"exposure time: "<<cs_->expose_us.read()<< "[us]"<<std::endl;
     // std::cout<<"Frame rate: "
@@ -276,8 +286,9 @@ bool BlueFox::grabImage(sensor_msgs::Image &image_msg){
     //   << stat_->errorCount.readS()
     // << ", " << stat_->captureTime_s.name() << ": " 
     //   << stat_->captureTime_s.readS() << std::endl;
-    std::cout<<" expose_us: "<<request_->infoExposeTime_us.read()<<" [us], ";
-    std::cout<<" gain_dB: "<<request_->infoGain_dB.read()<<" [dB]"<<std::endl;
+
+    // std::cout<<" expose_us: "<<request_->infoExposeTime_us.read()<<" [us], ";
+    //std::cout<<" gain_dB: "<<request_->infoGain_dB.read()<<" [dB]"<<std::endl;
 
     // Release capture request
     fi_->imageRequestUnlock(request_nr);

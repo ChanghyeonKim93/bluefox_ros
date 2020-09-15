@@ -5,9 +5,6 @@
 #include "dynamic_reconfigure/server.h"
 #include "bluefox/bluefoxDynConfig.h"
 
-void callbackDynReconfig(bluefox::bluefoxDynConfig &config, uint32_t lvl){
-    ROS_INFO("Reconfigure Request: %d",config.int_param);
-}
 
 // trigger pin = digIn0+
 // trigger ground level is same with the Arduino ground level.
@@ -16,10 +13,6 @@ void callbackDynReconfig(bluefox::bluefoxDynConfig &config, uint32_t lvl){
 int main(int argc, char **argv) {
     std::cout << "BlueFOX node is running..." << std::endl;
     ros::init(argc, argv, "bluefox_multiple_node");
-    dynamic_reconfigure::Server<bluefox::bluefoxDynConfig> server;
-    dynamic_reconfigure::Server<bluefox::bluefoxDynConfig>::CallbackType f;
-    f = boost::bind(&callbackDynReconfig, _1, _2);
-    server.setCallback(f);
 
     ros::NodeHandle nh("~");
 
