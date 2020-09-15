@@ -1,4 +1,4 @@
-# bluecougar_x_ros
+# bluefox2_MLC20x_ros
 A ROS C++ wrapper for Matrix Vision USB 2.0 vision camera, mvBlueFOX-MLC series.
 I tested it with ROS melodic + linux Ubuntu 18.04 LTS. A tested camera model is exactly mvBlueFOX-MLC200wC/G.
 
