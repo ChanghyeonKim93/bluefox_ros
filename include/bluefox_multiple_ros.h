@@ -141,12 +141,15 @@ void BlueFOX_MULTIPLE_ROS::callbackDynReconfig(bluefox::bluefoxDynConfig &config
     }
 
     if(config.aec){
-        for(int i = 0; i < n_devs_; i++)
+        for(int i = 0; i < n_devs_; i++){
             bluefoxs_[i]->setAutoExposureMode(true);
+        }
     }
     else{
-        for(int i = 0; i < n_devs_; i++)
+        for(int i = 0; i < n_devs_; i++){
             bluefoxs_[i]->setAutoExposureMode(false);
+            bluefoxs_[i]->setExposureTime(config.expose_us);
+        }
     }
 
     if(config.agc){
@@ -166,7 +169,7 @@ void BlueFOX_MULTIPLE_ROS::callbackDynReconfig(bluefox::bluefoxDynConfig &config
         for(int i = 0; i < n_devs_; i++)
             bluefoxs_[i]->setWhiteBalance(config.wbp,0,0,0);
     }
-
+    
     ROS_INFO("Parameter reconfigured.\n");
 }
 #endif
