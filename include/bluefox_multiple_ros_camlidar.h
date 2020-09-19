@@ -58,6 +58,12 @@ public:
         }
 	cout << " mcu trigger subscriber.\n";
         sub_msg_ = nh_.subscribe("/mcu/trigger", 1, &BlueFOX_MULTIPLE_ROS_CAMLIDAR::callback, this);
+
+
+        // dynamic reconfigure for real-time hardware parameter settings
+        f = boost::bind(&BlueFOX_MULTIPLE_ROS_CAMLIDAR::callbackDynReconfig, this, _1, _2);
+        server.setCallback(f);
+
         cout << "Please wait for setting cameras...\n";
         ros::Duration(1.0).sleep();
         cout << "camera setting is done.\n";
@@ -97,7 +103,7 @@ BlueFOX_MULTIPLE_ROS_CAMLIDAR::~BlueFOX_MULTIPLE_ROS_CAMLIDAR(){
 
 void BlueFOX_MULTIPLE_ROS_CAMLIDAR::callback(const camlidar_module::trg_msgConstPtr& msg)
 {
-    std::cout << "CAMNODE time: "<< msg->stamp.sec<<"."<<msg->stamp.nsec << "\n";
+    // std::cout << "CAMNODE time: "<< msg->stamp.sec<<"."<<msg->stamp.nsec << "\n";
     bool state_grab = true;
     // snapshot grab mode.
     for(int i = 0; i < n_devs_; i++){
@@ -105,6 +111,8 @@ void BlueFOX_MULTIPLE_ROS_CAMLIDAR::callback(const camlidar_module::trg_msgConst
     }   
     if(state_grab){
     	for(int i = 0; i <n_devs_; i++){
+            img_msgs_[i].header.stamp.sec = msg->stamp.sec;
+	    img_msgs_[i].header.stamp.nsec = msg->stamp.nsec;
     	    image_publishers_[i].publish(img_msgs_[i]);
         }
     }
