@@ -35,7 +35,7 @@ using namespace mvIMPACT::acquire;
 class BlueFOX_MULTIPLE_ROS {
 public:
     explicit BlueFOX_MULTIPLE_ROS(
-        ros::NodeHandle& nh, bool binning_on, bool triggered_on,
+        ros::NodeHandle& nh, bool binning_on, bool software_binning_on, int software_binning_level, bool triggered_on,
         bool aec_on, bool agc_on, bool hdr_on, int expose_us, double frame_rate)
     : nh_(nh), it_(nh_)
     {
@@ -45,7 +45,7 @@ public:
         for(int i = 0; i < n_devs_; i++){
             std::cout << "[" << i << "]: ";
             BlueFox* bluefox_temp = 
-                        new BlueFox(validDevices_[i], i, binning_on, triggered_on, 
+                        new BlueFox(validDevices_[i], i, binning_on, software_binning_on, software_binning_level,triggered_on, 
                         aec_on, agc_on,hdr_on, expose_us, frame_rate);
             std::string topic_name = "/" + std::to_string(i) + "/image_raw";
 
@@ -133,11 +133,11 @@ void BlueFOX_MULTIPLE_ROS::callbackDynReconfig(bluefox::bluefoxDynConfig &config
     
     if(config.binning_mode){
         for(int i = 0; i < n_devs_; i++)
-            bluefoxs_[i]->setBinningMode(true);
+            bluefoxs_[i]->setHardwareBinningMode(true);
     }
     else{
         for(int i = 0; i < n_devs_; i++)
-            bluefoxs_[i]->setBinningMode(false);
+            bluefoxs_[i]->setHardwareBinningMode(false);
     }
 
     if(config.aec){

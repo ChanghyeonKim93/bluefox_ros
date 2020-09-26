@@ -45,13 +45,15 @@ string BayerPatternToEncoding(const TBayerMosaicParity& bayer_pattern,
 class BlueFox {
   public:
     BlueFox(mvIMPACT::acquire::Device* dev, int cam_id, 
-      bool binning_on, bool triggered_on, bool aec_on, bool agc_on, bool hdr_on,
+      bool binning_on, bool software_binning_on, int software_binning_level, bool triggered_on, bool aec_on, bool agc_on, bool hdr_on,
       int expose_us, double frame_rate);
     ~BlueFox();
     bool grabImage(sensor_msgs::Image &image_msg);
 
     void setTriggerMode(bool onoff);
-    void setBinningMode(bool onoff);
+    void setHardwareBinningMode(bool onoff);
+    void setSoftwareBinningMode(bool onoff, int lvl);
+    void getSoftwareBinning(int lvl, uint8_t* src, uint8_t* dst);
     void setAutoExposureMode(bool onoff);
     void setAutoGainMode(bool onoff);
     void setExposureTime(const int& expose_us);
@@ -69,6 +71,8 @@ inline double getFrameRate(){return cs_->frameDelay_us.read();};
 
   private:
     bool binning_on_;
+    bool software_binning_on_;
+    int software_binning_level_;
     bool trigger_on_; 
     bool aec_on_;
     bool agc_on_;
@@ -87,12 +91,15 @@ inline double getFrameRate(){return cs_->frameDelay_us.read();};
     mvIMPACT::acquire::CameraSettingsBlueFOX *cs_{nullptr};
     mvIMPACT::acquire::Statistics *stat_{nullptr};
     mvIMPACT::acquire::ImageProcessing *improc_{nullptr};
+
+    uint8_t* down_data;
 };
 
 /* IMPLEMENTATION */
-BlueFox::BlueFox(mvIMPACT::acquire::Device* dev, int cam_id, bool binning_on, 
+BlueFox::BlueFox(mvIMPACT::acquire::Device* dev, int cam_id, bool binning_on, bool software_binning_on, int software_binning_level, 
 bool trigger_on, bool aec_on, bool agc_on, bool hdr_on, int expose_us, double frame_rate) 
-: dev_(dev), binning_on_(binning_on), trigger_on_(trigger_on), aec_on_(aec_on), 
+: dev_(dev), binning_on_(binning_on), software_binning_on_(software_binning_on), software_binning_level_(software_binning_level),
+trigger_on_(trigger_on), aec_on_(aec_on), 
 agc_on_(agc_on), hdr_on_(hdr_on), expose_us_(expose_us), frame_rate_(frame_rate)
 {
     cnt_img = 0;
@@ -109,8 +116,8 @@ agc_on_(agc_on), hdr_on_(hdr_on), expose_us_(expose_us), frame_rate_(frame_rate)
     // no delay from the hardware query moment.
     cs_->frameDelay_us.write(0);
 
-    
-    setBinningMode(binning_on_);// binning mode setting    
+    // hardware binning works only when software binning is not used.
+    if(!software_binning_on_) setHardwareBinningMode(binning_on_);// binning mode setting    
     setExposureTime(expose_us_);// set exposure.
     setAutoExposureMode(aec_on_);
     setAutoGainMode(agc_on_);
@@ -148,6 +155,12 @@ agc_on_(agc_on), hdr_on_(hdr_on), expose_us_(expose_us), frame_rate_(frame_rate)
       hdr_control.HDREnable.write(bTrue); // hdr on.
       hdr_control.HDRMode.write(cHDRmFixed0);
     }
+
+    // for softwere binning.
+    if(software_binning_on_){
+      cout <<" blueFOX software binning on ! -lvl :" <<software_binning_level_<<endl;
+      down_data = new uint8_t[752*480*4];
+    }
     
 };
 
@@ -160,10 +173,51 @@ BlueFox::~BlueFox() {
   }
 };
 
-void BlueFox::setBinningMode(bool onoff){
-    if(onoff == true) cs_->binningMode.write(cbmBinningHV); // cbmBinningHV
-    else cs_->binningMode.write(cbmOff); // cbmOff: no binning. 
+void BlueFox::setHardwareBinningMode(bool onoff){
+  if(!software_binning_on_){
+    if(onoff == true) {
+      cs_->binningMode.write(cbmBinningHV); // cbmBinningHV
+      binning_on_ = true;
+    }
+    else {
+      cs_->binningMode.write(cbmOff); // cbmOff: no binning. 
+      binning_on_ = false;
+    }
+  }
+  else{
+    cs_->binningMode.write(cbmOff); 
+    binning_on_ = false;
+    cout <<" WARN: software binning mode intervenes.\n";
+  }
 };
+
+void BlueFox::setSoftwareBinningMode(bool onoff, int lvl){
+  if(onoff == true) { // software on
+    cs_->binningMode.write(cbmOff);
+    software_binning_level_ = lvl;
+    software_binning_on_ = true;
+  }else{
+    software_binning_on_ = false;
+  }
+}
+
+void BlueFox::getSoftwareBinning(int lvl, uint8_t* src, uint8_t* dst){
+  int index = 0;
+  int den = std::pow(2,lvl);
+  int stepsz_dst = 3008/den;
+  int stepsz_org = 3008*den;
+  
+  int den4 = den*4;
+  for(int v = 0; v < 480/den; v++){
+    for(int u = 0; u < 752/den; u++){
+      int u4 = 4*u;
+      *(dst+v*stepsz_dst+u4)   = *(src+v*stepsz_org+u*den4);	
+      *(dst+v*stepsz_dst+u4+1) = *(src+v*stepsz_org+u*den4+1);	    
+      *(dst+v*stepsz_dst+u4+2) = *(src+v*stepsz_org+u*den4+2);	    
+      *(dst+v*stepsz_dst+u4+3) = *(src+v*stepsz_org+u*den4+3);	        
+    }
+  }
+}
 
 void BlueFox::setTriggerMode(bool onoff) {
   if(onoff == true){
@@ -298,24 +352,32 @@ bool BlueFox::grabImage(sensor_msgs::Image &image_msg){
     } else {
         encoding = PixelFormatToEncoding(request_->imagePixelFormat.read());
     }
-    image_msg.header.frame_id = frame_id_;
-    sensor_msgs::fillImage(image_msg, encoding, request_->imageHeight.read(),
-                         request_->imageWidth.read(),
-                         request_->imageLinePitch.read(),
-                         request_->imageData.read());
-    //std::cout<<" sz: [" << request_->imageWidth.read() << "x" << request_->imageHeight.read()<<"]";
+	
 
-    // std::cout<<"exposure time: "<<cs_->expose_us.read()<< "[us]"<<std::endl;
-    // std::cout<<"Frame rate: "
-    // << ": " << stat_->framesPerSecond.name() << ": " 
-    //   << stat_->framesPerSecond.readS()
-    // << ", " << stat_->errorCount.name() << ": " 
-    //   << stat_->errorCount.readS()
-    // << ", " << stat_->captureTime_s.name() << ": " 
-    //   << stat_->captureTime_s.readS() << std::endl;
+    // image resolution down
+    if(software_binning_on_){
+      uint8_t* data_org = (uint8_t*)request_->imageData.read();
+      getSoftwareBinning(software_binning_level_,data_org, down_data);
+      int den = std::pow(2,software_binning_level_);
+      image_msg.header.frame_id = frame_id_;
+      sensor_msgs::fillImage(image_msg, encoding, request_->imageHeight.read()/den,
+                          request_->imageWidth.read()/den,
+                          request_->imageLinePitch.read()/den,
+                          down_data);
 
-    // std::cout<<" expose_us: "<<request_->infoExposeTime_us.read()<<" [us], ";
-    //std::cout<<" gain_dB: "<<request_->infoGain_dB.read()<<" [dB]"<<std::endl;
+      //cout<<"datatype: "<<encoding<<endl;
+      //cout<<"img h: "<<request_->imageHeight.read()/den << ", img v: "<<request_->imageWidth.read()/den<<", linepitch: "<<request_->imageLinePitch.read()/den<<endl;
+    }
+    else{
+      image_msg.header.frame_id = frame_id_;
+      sensor_msgs::fillImage(image_msg, encoding, request_->imageHeight.read(),
+                          request_->imageWidth.read(),
+                          request_->imageLinePitch.read(),
+                          request_->imageData.read());
+
+      //cout<<"datatype: "<<encoding<<endl;
+      //cout<<"img h: "<<request_->imageHeight.read()<< ", img v: "<<request_->imageWidth.read()<<", linepitch: "<<request_->imageLinePitch.read()<<endl;
+    }
 
     // Release capture request
     fi_->imageRequestUnlock(request_nr);

@@ -17,6 +17,8 @@ int main(int argc, char **argv) {
     ros::NodeHandle nh("~");
 
     bool binning_on   = false;
+    bool software_binning_on = true;
+    int software_binning_level = 1;
     bool triggered_on = true;
     bool aec_on       = false; // auto exposure control on / off
     bool agc_on       = false; // auto gain control on / off
@@ -25,6 +27,8 @@ int main(int argc, char **argv) {
     double frame_rate = 60.0; // frame rate (full resolution: up to 30 Hz)
 
     ros::param::get("~binning_on", binning_on);
+    ros::param::get("~software_binning_on", software_binning_on);
+    ros::param::get("~software_binning_level", software_binning_level);
 	ros::param::get("~triggered_on", triggered_on);
 	ros::param::get("~aec_on", aec_on);
 	ros::param::get("~agc_on", agc_on);
@@ -33,7 +37,7 @@ int main(int argc, char **argv) {
     ros::param::get("~frame_rate", frame_rate);
 
     BlueFOX_MULTIPLE_ROS *bluefoxs = 
-        new BlueFOX_MULTIPLE_ROS(nh, binning_on, triggered_on, 
+        new BlueFOX_MULTIPLE_ROS(nh, binning_on,software_binning_on,software_binning_level, triggered_on, 
         aec_on, agc_on, hdr_on, expose_us, frame_rate);
     
     while(ros::ok())

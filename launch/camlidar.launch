@@ -1,5 +1,7 @@
 <launch>
     <arg name="binning_on" default="false"/>
+    <arg name="software_binning_on" default="true"/>
+    <arg name="software_binning_level" default="2"/>
     <arg name="triggered_on" default="true"/>
     <arg name="auto_exposure_control" default="false"/>
     <arg name="auto_gain_control" default="false"/>
@@ -9,6 +11,8 @@
 
     <node pkg="bluefox" name="bluefox_multiple_camlidar_node" type="bluefox_multiple_camlidar_node" output="screen">
         <param name="binning_on" type="bool" value="$(arg binning_on)"/>
+        <param name="software_binning_on" type="bool" value="$(arg software_binning_on)"/>
+        <param name="software_binning_level" type="int" value="$(arg software_binning_level)"/>
         <param name="triggered_on" type="bool" value="$(arg triggered_on)"/>
         <param name="aec_on" type="bool" value="$(arg auto_exposure_control)"/>
         <param name="agc_on" type="bool" value="$(arg auto_gain_control)"/>
