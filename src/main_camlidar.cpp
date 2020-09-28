@@ -22,7 +22,7 @@ int main(int argc, char **argv) {
     bool triggered_on = true;
     bool aec_on       = false; // auto exposure control on / off
     bool agc_on       = false; // auto gain control on / off
-    bool hdr_on       = false;
+    bool hdr_on       = true;
     int expose_us     = 11000; // it is also max. exposure for auto exposure control.
     double frame_rate = 60.0; // frame rate (full resolution: up to 30 Hz)
 
