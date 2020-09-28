@@ -12,7 +12,7 @@
 // TODO: multiple cameras setting is not supported yet .. T.T
 int main(int argc, char **argv) {
     std::cout << "BlueFOX node is running..." << std::endl;
-    ros::init(argc, argv, "bluefox_multiple_node");
+    ros::init(argc, argv, "bluefox_multiple_camlidar_node");
 
     ros::NodeHandle nh("~");
 
