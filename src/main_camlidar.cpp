@@ -18,7 +18,7 @@ int main(int argc, char **argv) {
 
     bool binning_on   = false;
     bool software_binning_on = true;
-    int software_binning_level = 2;
+    int software_binning_level = 1;
     bool triggered_on = true;
     bool aec_on       = false; // auto exposure control on / off
     bool agc_on       = false; // auto gain control on / off

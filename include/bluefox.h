@@ -355,7 +355,7 @@ bool BlueFox::grabImage(sensor_msgs::Image &image_msg){
 	
 
     // image resolution down
-    if(software_binning_on_){
+    if(software_binning_on_ && software_binning_level_ > 0){
       uint8_t* data_org = (uint8_t*)request_->imageData.read();
       getSoftwareBinning(software_binning_level_,data_org, down_data);
       int den = std::pow(2,software_binning_level_);
