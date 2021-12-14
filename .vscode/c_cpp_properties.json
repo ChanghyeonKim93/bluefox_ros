@@ -7,8 +7,10 @@
             },
             "includePath": [
                 "/home/larrkchlaptop/catkin_ws/devel/include/**",
+                "/home/larrkchdesk/catkin_ws/devel/include/**",
                 "/opt/ros/kinetic/include/**",
                 "/home/larrkchlaptop/catkin_ws/src/bluecougar_x_ros/include/**",
+                "/home/larrkchdesk/catkin_ws/src/bluefox_ros/include/**",
                 "/home/larrkchlaptop/catkin_ws/src/bluefox_ros/include/**",
                 "/home/larrkchlaptop/catkin_ws/src/camlidar_module/include/**",
                 "/home/larrkchlaptop/catkin_ws/src/dynamic_tutorials/include/**",

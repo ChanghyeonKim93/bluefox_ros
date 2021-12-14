@@ -27,6 +27,7 @@ using namespace std;
 using namespace mvIMPACT::acquire;
 using namespace sensor_msgs::image_encodings;
 
+std::mutex s_mutex;
 /**
  * @brief PixelFormatToEncoding Convert pixel format to image encoding
  * @param pixel_format mvIMPACT ImageBufferPixelFormat
@@ -42,14 +43,40 @@ string PixelFormatToEncoding(const TImageBufferPixelFormat& pixel_format);
 string BayerPatternToEncoding(const TBayerMosaicParity& bayer_pattern,
                                    int bytes_per_pixel);
 
-class BlueFox {
+class BlueFox;
+class ThreadData;
+
+class ThreadData {
+    volatile bool is_terminated_;
+    unique_ptr<thread> p_thread_;
+public:
+    explicit ThreadData() : is_terminated_( false ), p_thread_( nullptr ) {};
+    virtual ~ThreadData() {};
+
+    bool isTerminated() const { return is_terminated_; };
+    
+    template<class _Fn, class _Arg>
+    void startThread( _Fn&& _Fx, _Arg&& _Ax ) {
+        p_thread_ = unique_ptr<thread>( new thread( _Fx, _Ax ) );
+    };
+    void terminateThread() {
+        is_terminated_ = true;
+        if( p_thread_ != nullptr ) {
+            p_thread_->join();
+            cout << "A thread join! \n";
+        }
+    };
+};
+
+class BlueFox  : public ThreadData {
   public:
     BlueFox(mvIMPACT::acquire::Device* dev, int cam_id, 
       bool binning_on, bool software_binning_on, int software_binning_level, bool triggered_on, bool aec_on, bool agc_on, bool hdr_on,
       int expose_us, double frame_rate);
     ~BlueFox();
     bool grabImage(sensor_msgs::Image &image_msg);
-
+    bool grabImageThread(sensor_msgs::Image &image_msg);
+    
     void setTriggerMode(bool onoff);
     void setHardwareBinningMode(bool onoff);
     void setSoftwareBinningMode(bool onoff, int lvl);
@@ -63,11 +90,33 @@ class BlueFox {
 
     void setHighDynamicRange(bool hdr_onoff);
 
-inline double getExposureTime(){return cs_->expose_us.read();};
-inline double getGain(){return cs_->gain_dB.read();};
-inline double getFrameRate(){return cs_->frameDelay_us.read();};
+    inline double getExposureTime(){return cs_->expose_us.read();};
+    inline double getGain(){return cs_->gain_dB.read();};
+    inline double getFrameRate(){return cs_->frameDelay_us.read();};
 
+    // getters
+    mvIMPACT::acquire::Device*  device() const {return dev_; };
+    mvIMPACT::acquire::Request* request() {return request_; };
+    mvIMPACT::acquire::FunctionInterface* functioninterface() const { return fi_; };
+    mvIMPACT::acquire::ImageProcessing* imageprocessing() const {return img_proc_; };
+    mvIMPACT::acquire::CameraSettingsBlueFOX* camerasettingbluefox() const {return cs_; };
+    mvIMPACT::acquire::Statistics* statistics() const { return stat_; }; 
+    bool isBinningOn() const {return binning_on_;};
+    bool isTriggerOn() const {return trigger_on_;};
+    bool isAecOn() const {return aec_on_; };
+    bool isAgcOn() const {return agc_on_; };
+    int exposeus() const {return expose_us_;};
+    double framerate() const {return frame_rate_;};
     string serial(){return this->serial_;};
+
+    string frameid() const {return frame_id_;};
+    int cntimg() const {return cnt_img;};
+    void addCntImg() { ++cnt_img;};
+
+    void setGrabbed() {is_grabbed_ = true;};
+    void setUnGrabbed() {is_grabbed_ = false;};
+
+    int curr_request_nr_;
 
   private:
     bool binning_on_;
@@ -83,6 +132,9 @@ inline double getFrameRate(){return cs_->frameDelay_us.read();};
     string serial_;
     string frame_id_;
 
+
+    bool is_grabbed_;
+
     mvIMPACT::acquire::DeviceManager devMgr_;
     mvIMPACT::acquire::Device* dev_{nullptr}; // multiple devices
     mvIMPACT::acquire::Request *request_{nullptr};
@@ -96,6 +148,57 @@ inline double getFrameRate(){return cs_->frameDelay_us.read();};
 };
 
 /* IMPLEMENTATION */
+
+void liveThread(BlueFox* bluefox){
+  {
+    lock_guard<mutex> lockedScope( s_mutex );
+    cout << "[BlueFOX THREAD] start thread for [" << bluefox->serial() << "]\n";
+  }
+
+  // establish access to the statistic properties
+  mvIMPACT::acquire::Statistics* pSS        = bluefox->statistics();
+  mvIMPACT::acquire::FunctionInterface* pFI = bluefox->functioninterface();
+  mvIMPACT::acquire::Request* pREQUEST      = bluefox->request();
+
+  const unsigned int timeout_ms = {100};
+  // run thread loop
+  while(!bluefox->isTerminated() ){
+    int error_msg = pFI->imageRequestSingle();
+    if(error_msg == mvIMPACT::acquire::DEV_NO_FREE_REQUEST_AVAILABLE){
+      //lock_guard<mutex> lockedScope( s_mutex );
+      //std::cout<<"[BlueFOX THREAD info] Cam [" << bluefox->frameid() << "]: the camera is not available...\n";
+      continue;
+    }
+
+    // wait for results from the default capture queue
+    bluefox->curr_request_nr_ = pFI->imageRequestWaitFor( timeout_ms );
+
+    if(!pFI->isRequestNrValid( bluefox->curr_request_nr_ ) ) {
+      continue;
+    }
+    pREQUEST = pFI->getRequest( bluefox->curr_request_nr_ );
+    if( !pREQUEST->isOK() ) {
+      lock_guard<mutex> lockedScope( s_mutex );
+      //cout << "[BlueFOX THREAD info] Cam ["<< bluefox->frameid() << "]: fail to rcv..."
+      //     << " Error message: " << pREQUEST->requestResult.readS() <<"\n";
+      bluefox->setUnGrabbed();
+      continue;
+    }
+    {
+      lock_guard<mutex> lockedScope( s_mutex );
+      bluefox->setGrabbed();
+      bluefox->addCntImg();
+      
+      /*cout << "[BlueFOX THREAD info] from " << bluefox->device()->serial.read()
+            << ": " << pSS->framesPerSecond.name() << ": " << pSS->framesPerSecond.readS()
+            << ", " << pSS->errorCount.name() << ": " << pSS->errorCount.readS()
+            << ", " << pREQUEST->infoFrameNr
+            << ", " << pREQUEST->infoFrameID
+            << ", " << pSS->frameCount << endl;*/
+    }
+  }
+};
+
 BlueFox::BlueFox(mvIMPACT::acquire::Device* dev, int cam_id, bool binning_on, bool software_binning_on, int software_binning_level, 
 bool trigger_on, bool aec_on, bool agc_on, bool hdr_on, int expose_us, double frame_rate) 
 : dev_(dev), binning_on_(binning_on), software_binning_on_(software_binning_on), software_binning_level_(software_binning_level),
@@ -221,13 +324,15 @@ void BlueFox::getSoftwareBinning(int lvl, uint8_t* src, uint8_t* dst){
 
 void BlueFox::setTriggerMode(bool onoff) {
   if(onoff == true){
-    cout<<"Set ["<<serial_<<"] in trigger mode."<<endl;
+    cout << "Set [" << serial_ << "] in trigger mode." << endl;
     // trigger mode
     // ctsDigIn0 : digitalInput 0 as trigger source
     // In this application an image is triggered by a rising edge. (over +3.3 V) 
     cs_->triggerSource.write(ctsDigIn0);
     cs_->triggerMode.write(ctmOnHighLevel); // ctmOnRisingEdge ctmOnHighLevel
     cs_->frameDelay_us.write(0);
+    cs_->imageRequestTimeout_ms.write( 0 );
+
     cout<<"  trigger source: "<<cs_->triggerSource.read();
     cout<<" / trigger mode: "<<cs_->triggerMode.read();
     cout<<" / exposure time: "<<cs_->expose_us.read()<< "[us]" << endl;
@@ -320,10 +425,10 @@ bool BlueFox::grabImage(sensor_msgs::Image &image_msg){
   // unlocked no matter which result mvIMPACT::acquire::Request::requestResult
   // contains.
   // http://www.matrix-vision.com/manuals/SDK_CPP/ImageAcquisition_section_capture.html
-    int error_msg = fi_->imageRequestSingle();
+    int error_msg  = fi_->imageRequestSingle();
     // if(error_msg == mvIMPACT::acquire::DEV_NO_FREE_REQUEST_AVAILABLE) std::cout<<"no available\n";
 
-    int request_nr = fi_->imageRequestWaitFor(1000);
+    int request_nr = fi_->imageRequestWaitFor(500);
     // if failed,
     if(!fi_->isRequestNrValid( request_nr )) {
         // std::cout<<"["<<frame_id_<<"] waits for new trigger signal..."<<std::endl;
@@ -331,12 +436,12 @@ bool BlueFox::grabImage(sensor_msgs::Image &image_msg){
         return false;
     }
 
-    request_ = fi_->getRequest(request_nr);
+    request_ = fi_->getRequest( request_nr );
     // Check if request is ok
     if (!request_->isOK()) {
         // need to unlock here because the request is valid even if it is not ok
         std::cout<< "ERROR: image receiving fails!!"<<std::endl;
-        fi_->imageRequestUnlock(request_nr);
+        fi_->imageRequestUnlock( request_nr );
         return false;
     }
 
@@ -375,13 +480,52 @@ bool BlueFox::grabImage(sensor_msgs::Image &image_msg){
                           request_->imageLinePitch.read(),
                           request_->imageData.read());
 
-      //cout<<"datatype: "<<encoding<<endl;
+      // cout<<"datatype: "<<encoding<<endl;
       //cout<<"img h: "<<request_->imageHeight.read()<< ", img v: "<<request_->imageWidth.read()<<", linepitch: "<<request_->imageLinePitch.read()<<endl;
     }
 
     // Release capture request
     fi_->imageRequestUnlock(request_nr);
     return true;
+};
+
+
+bool BlueFox::grabImageThread(sensor_msgs::Image &image_msg){
+  if(is_grabbed_){
+    lock_guard<mutex> lockedScope( s_mutex );
+    std::cout<< "[BlueFOX info] Cam ["<< this->frame_id_<< "]: rcv success! # of img [" << cnt_img <<"] ";
+
+    std::string encoding;
+    const auto bayer_mosaic_parity = request_->imageBayerMosaicParity.read();
+    if (bayer_mosaic_parity != bmpUndefined) {
+        // Bayer pattern
+        const auto bytes_per_pixel = request_->imageBytesPerPixel.read();
+        encoding = BayerPatternToEncoding(bayer_mosaic_parity, bytes_per_pixel);
+    } else {
+        encoding = PixelFormatToEncoding(request_->imagePixelFormat.read());
+    }
+    image_msg.header.frame_id = frame_id_;
+    sensor_msgs::fillImage(image_msg, encoding, request_->imageHeight.read(),
+                         request_->imageWidth.read(),
+                         request_->imageLinePitch.read(),
+                         request_->imageData.read());
+    std::cout<<" sz: [" << request_->imageWidth.read()
+    << "x" << request_->imageHeight.read()<<"]";
+
+    // Unlock the used request
+    fi_->imageRequestUnlock(curr_request_nr_);
+
+    // initialize grab status
+    this->setUnGrabbed();
+    return true;
+  }
+  else{
+    // initialize grab status
+    lock_guard<mutex> lockedScope( s_mutex );
+    this->setUnGrabbed();
+    return false;
+  }
+    
 };
 
 

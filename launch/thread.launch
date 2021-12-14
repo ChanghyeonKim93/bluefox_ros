@@ -9,7 +9,7 @@
     <arg name="expose_us" default="13000"/>
     <arg name="frame_rate" default="30.0"/>
 
-    <node pkg="bluefox" name="bluefox_multiple_node" type="bluefox_multiple_node" output="screen">
+    <node pkg="bluefox" name="bluefox_multiple_thread_node" type="bluefox_multiple_thread_node" output="screen">
         <param name="binning_on" type="bool" value="$(arg binning_on)"/>
         <param name="software_binning_on" type="bool" value="$(arg software_binning_on)"/>
         <param name="software_binning_level" type="int" value="$(arg software_binning_level)"/>

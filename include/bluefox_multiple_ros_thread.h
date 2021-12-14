@@ -1,5 +1,5 @@
-#ifndef _BLUEFOX_MULTIPLE_ROS_H_
-#define _BLUEFOX_MULTIPLE_ROS_H_
+#ifndef _BLUEFOX_MULTIPLE_ROS_THREAD_H_
+#define _BLUEFOX_MULTIPLE_ROS_THREAD_H_
 
 #include <iostream>
 #include <vector>
@@ -23,6 +23,12 @@
 #include <apps/Common/exampleHelper.h>
 #include <mvIMPACT_CPP/mvIMPACT_acquire.h>
 
+
+#include <thread>
+#include <mutex>
+#include <memory> 
+
+
 #include "bluefox.h"
 
 #include "dynamic_reconfigure/server.h"
@@ -32,9 +38,9 @@
 using namespace std;
 using namespace mvIMPACT::acquire;
 
-class BlueFOX_MULTIPLE_ROS {
+class BlueFOX_MULTIPLE_ROS_THREAD {
 public:
-    explicit BlueFOX_MULTIPLE_ROS(
+    explicit BlueFOX_MULTIPLE_ROS_THREAD(
         ros::NodeHandle& nh, bool binning_on, bool software_binning_on, int software_binning_level, bool triggered_on,
         bool aec_on, bool agc_on, bool hdr_on, int expose_us, double frame_rate)
     : nh_(nh), it_(nh_)
@@ -55,9 +61,13 @@ public:
             image_publishers_.push_back(camera_pub_);
             img_msgs_.push_back(sensor_msgs::Image());
         }
+        // start live threads
+        for( auto* bf : bluefoxs_){
+            bf->startThread( liveThread, bf );
+        }
 
         // dynamic reconfigure for real-time hardware parameter settings
-        f = boost::bind(&BlueFOX_MULTIPLE_ROS::callbackDynReconfig, this, _1, _2);
+        f = boost::bind(&BlueFOX_MULTIPLE_ROS_THREAD::callbackDynReconfig, this, _1, _2);
         server.setCallback(f);
 
         cout << "Please wait for setting cameras...\n";
@@ -65,7 +75,7 @@ public:
         cout << "camera setting is done.\n";
     }; 
 
-    ~BlueFOX_MULTIPLE_ROS();
+    ~BlueFOX_MULTIPLE_ROS_THREAD();
 
     void Publish();
     void callbackDynReconfig(bluefox::bluefoxDynConfig &config, uint32_t lvl);
@@ -94,16 +104,17 @@ private:
 };
 
 /* IMPLEMENTATION */
-BlueFOX_MULTIPLE_ROS::~BlueFOX_MULTIPLE_ROS(){
+BlueFOX_MULTIPLE_ROS_THREAD::~BlueFOX_MULTIPLE_ROS_THREAD(){
     for(int i = 0; i < n_devs_; i++){
+        bluefoxs_[i]->terminateThread();
         delete bluefoxs_[i];
     }
 };
 
 //const sensor_msgs::ImagePtr& image_msg
-void BlueFOX_MULTIPLE_ROS::Publish() {
+void BlueFOX_MULTIPLE_ROS_THREAD::Publish() {
     for(int i = 0; i < n_devs_; i++){
-        bluefoxs_[i]->grabImage(img_msgs_[i]);
+        bluefoxs_[i]->grabImageThread(img_msgs_[i]);
     }   
     for(int i = 0; i <n_devs_; i++){
         image_publishers_[i].publish(img_msgs_[i]);
@@ -111,7 +122,7 @@ void BlueFOX_MULTIPLE_ROS::Publish() {
 };
 
 
-void BlueFOX_MULTIPLE_ROS::callbackDynReconfig(bluefox::bluefoxDynConfig &config, uint32_t lvl) {
+void BlueFOX_MULTIPLE_ROS_THREAD::callbackDynReconfig(bluefox::bluefoxDynConfig &config, uint32_t lvl) {
     if(config.hdr){
         for(int i = 0; i < n_devs_; i++)
             bluefoxs_[i]->setHighDynamicRange(true);

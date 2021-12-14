@@ -1,7 +1,7 @@
 #include <iostream>
 #include <ros/ros.h>
 
-#include "bluefox_multiple_ros.h"
+#include "bluefox_multiple_ros_thread.h"
 #include "dynamic_reconfigure/server.h"
 #include "bluefox/bluefoxDynConfig.h"
 
@@ -36,14 +36,16 @@ int main(int argc, char **argv) {
 	ros::param::get("~expose_us", expose_us);
     ros::param::get("~frame_rate", frame_rate);
 
-    BlueFOX_MULTIPLE_ROS *bluefoxs = 
-        new BlueFOX_MULTIPLE_ROS(nh, binning_on,software_binning_on,software_binning_level, triggered_on, 
+    BlueFOX_MULTIPLE_ROS_THREAD *bluefoxs = 
+        new BlueFOX_MULTIPLE_ROS_THREAD(nh, binning_on,software_binning_on,software_binning_level, triggered_on, 
         aec_on, agc_on, hdr_on, expose_us, frame_rate);
     
+    ros::Rate rate(5); // ROS Rate at 5Hz
     while(ros::ok())
     {
         ros::spinOnce();
 	    bluefoxs->Publish();
+        rate.sleep();
     }
 
     delete bluefoxs;
