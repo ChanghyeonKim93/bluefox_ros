@@ -9,6 +9,11 @@
     <arg name="expose_us" default="13000"/>
     <arg name="frame_rate" default="20.0"/>
 
+    <arg name="serial0" default="25003728"/>
+    <arg name="serial1" default="25001575"/>
+    <arg name="serial2" default="25003716"/>
+
+
     <node pkg="bluefox" name="bluefox_node0" type="bluefox_node" output="screen">
         <param name="binning_on" type="bool" value="$(arg binning_on)"/>
         <param name="software_binning_on" type="bool" value="$(arg software_binning_on)"/>
@@ -20,7 +25,7 @@
 	    <param name="expose_us" type="int" value="$(arg expose_us)"/>
         <param name="frame_rate" type="double" value="$(arg frame_rate)"/>
         <param name="cam_id" type="int" value="0"/>
-        <param name="serial" type="string" value="25003728"/>
+        <param name="serial" type="string" value="$(arg serial0)"/>
     </node>
 
     <node pkg="bluefox" name="bluefox_node1" type="bluefox_node" output="screen">
@@ -34,7 +39,7 @@
 	    <param name="expose_us" type="int" value="$(arg expose_us)"/>
         <param name="frame_rate" type="double" value="$(arg frame_rate)"/>
         <param name="cam_id" type="int" value="1"/>
-        <param name="serial" type="string" value="25001575"/>
+        <param name="serial" type="string" value="$(arg serial1)"/>
     </node>
 
     <node pkg="bluefox" name="bluefox_node2" type="bluefox_node" output="screen">
@@ -48,7 +53,7 @@
 	    <param name="expose_us" type="int" value="$(arg expose_us)"/>
         <param name="frame_rate" type="double" value="$(arg frame_rate)"/>
         <param name="cam_id" type="int" value="2"/>
-        <param name="serial" type="string" value="25003716"/>
+        <param name="serial" type="string" value="$(arg serial2)"/>
     </node>
 
     <node pkg="rqt_reconfigure" type="rqt_reconfigure" name="rqt_reconfigure" output="screen">
