@@ -2,7 +2,7 @@
     <arg name="binning_on" default="false"/>
     <arg name="software_binning_on" default="false"/>
     <arg name="software_binning_level" default="1"/>
-    <arg name="triggered_on" default="true"/>
+    <arg name="triggered_on" default="false"/>
     <arg name="auto_exposure_control" default="false"/>
     <arg name="auto_gain_control" default="false"/>
     <arg name="high_dynamic_range_on" default="false"/>

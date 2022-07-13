@@ -19,14 +19,14 @@ int main(int argc, char **argv) {
     bool binning_on   = false;
     bool software_binning_on = false;
     int software_binning_level = 1;
-    bool triggered_on = true;
+    bool triggered_on = false;
     bool aec_on       = false; // auto exposure control on / off
     bool agc_on       = false; // auto gain control on / off
     bool hdr_on       = false;
     int expose_us     = 11000; // it is also max. exposure for auto exposure control.
     double frame_rate = 60.0; // frame rate (full resolution: up to 30 Hz)
     int cam_id = 1;
-    string serial = "25003728";
+    string serial = "25003729";
 
     ros::param::get("~binning_on", binning_on);
     ros::param::get("~software_binning_on", software_binning_on);
@@ -44,10 +44,12 @@ int main(int argc, char **argv) {
         new BlueFOX_ROS(nh, binning_on,software_binning_on,software_binning_level, triggered_on, 
         aec_on, agc_on, hdr_on, expose_us, frame_rate, cam_id, serial);
     
+    ros::Rate rate(500);
     while(ros::ok())
     {
-        ros::spinOnce();
 	    bluefox->Publish();
+        ros::spinOnce();
+        rate.sleep();
     }
 
     delete bluefox;

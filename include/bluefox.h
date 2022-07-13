@@ -435,7 +435,6 @@ bool BlueFox::grabImage(sensor_msgs::Image &image_msg){
         fi_->imageRequestUnlock( request_nr );
         return false;
     }
-
     request_ = fi_->getRequest( request_nr );
     // Check if request is ok
     if (!request_->isOK()) {

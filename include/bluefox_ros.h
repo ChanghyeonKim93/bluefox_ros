@@ -61,11 +61,11 @@ public:
         img_msg_ = sensor_msgs::Image();
 
         // dynamic reconfigure for real-time hardware parameter settings
-        f = boost::bind(&BlueFOX_ROS::callbackDynReconfig, this, _1, _2);
-        server.setCallback(f);
+        // f = boost::bind(&BlueFOX_ROS::callbackDynReconfig, this, _1, _2);
+        // server.setCallback(f);
 
         cout << "Please wait for setting cameras...\n";
-        ros::Duration(0.5).sleep();
+        // ros::Duration(0.5).sleep();
         cout << "camera setting is done.\n";
     }; 
 
