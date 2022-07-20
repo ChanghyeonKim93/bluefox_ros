@@ -6,8 +6,8 @@
     <arg name="auto_exposure_control" default="false"/>
     <arg name="auto_gain_control" default="false"/>
     <arg name="high_dynamic_range_on" default="false"/>
-    <arg name="expose_us" default="3000"/>
-    <arg name="frame_rate" default="20.0"/>
+    <arg name="expose_us" default="8000"/>
+    <arg name="frame_rate" default="10.0"/>
 
     <arg name="serial0" default="25003729"/>
 
