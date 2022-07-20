@@ -4,12 +4,14 @@
     <arg name="software_binning_level" default="2"/>
     <arg name="triggered_on" default="true"/>
     <arg name="auto_exposure_control" default="false"/>
-    <arg name="auto_gain_control" default="true"/>
-    <arg name="high_dynamic_range_on" default="true"/>
+    <arg name="auto_gain_control" default="false"/>
+    <arg name="high_dynamic_range_on" default="false"/>
     <arg name="expose_us" default="3000"/>
-    <arg name="frame_rate" default="60.0"/>
+    <arg name="frame_rate" default="20.0"/>
 
-    <node pkg="bluefox" name="bluefox_multiple_node" type="bluefox_multiple_node" output="screen">
+    <arg name="serial0" default="25003729"/>
+
+    <node pkg="bluefox" name="bluefox_node0" type="bluefox_node" output="screen">
         <param name="binning_on" type="bool" value="$(arg binning_on)"/>
         <param name="software_binning_on" type="bool" value="$(arg software_binning_on)"/>
         <param name="software_binning_level" type="int" value="$(arg software_binning_level)"/>
@@ -19,10 +21,13 @@
         <param name="hdr_on" type="bool" value="$(arg high_dynamic_range_on)"/>
 	    <param name="expose_us" type="int" value="$(arg expose_us)"/>
         <param name="frame_rate" type="double" value="$(arg frame_rate)"/>
+        <param name="cam_id" type="int" value="0"/>
+        <param name="serial" type="string" value="$(arg serial0)"/>
     </node>
 
-    <node pkg="rqt_reconfigure" type="rqt_reconfigure" name="rqt_reconfigure" output="screen">
-    </node>
+    <!-- <node pkg="rqt_reconfigure" type="rqt_reconfigure" name="rqt_reconfigure" output="screen">
+    </node> -->
+
     <node pkg="rqt_image_view" type="rqt_image_view" name="rqt_image_view" output="screen">
     </node>
 </launch>
