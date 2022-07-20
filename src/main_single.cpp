@@ -40,11 +40,13 @@ int main(int argc, char **argv) {
     ros::param::get("~cam_id", cam_id);
     ros::param::get("~serial", serial);
 
+    std::cout << "trigger? : " << triggered_on << std::endl;
+
     BlueFOX_ROS *bluefox = 
         new BlueFOX_ROS(nh, binning_on,software_binning_on,software_binning_level, triggered_on, 
         aec_on, agc_on, hdr_on, expose_us, frame_rate, cam_id, serial);
     
-    ros::Rate rate(500);
+    ros::Rate rate(2000);
     while(ros::ok())
     {
 	    bluefox->Publish();

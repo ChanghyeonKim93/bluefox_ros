@@ -2,11 +2,11 @@
     <arg name="binning_on" default="false"/>
     <arg name="software_binning_on" default="false"/>
     <arg name="software_binning_level" default="2"/>
-    <arg name="triggered_on" default="false"/>
-    <arg name="auto_exposure_control" default="true"/>
+    <arg name="triggered_on" default="true"/>
+    <arg name="auto_exposure_control" default="false"/>
     <arg name="auto_gain_control" default="true"/>
     <arg name="high_dynamic_range_on" default="true"/>
-    <arg name="expose_us" default="13000"/>
+    <arg name="expose_us" default="3000"/>
     <arg name="frame_rate" default="60.0"/>
 
     <node pkg="bluefox" name="bluefox_multiple_node" type="bluefox_multiple_node" output="screen">
