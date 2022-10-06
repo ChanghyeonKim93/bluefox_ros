@@ -100,6 +100,7 @@ BlueFOX_ROS::~BlueFOX_ROS(){
 //const sensor_msgs::ImagePtr& image_msg
 void BlueFOX_ROS::Publish() {
     bluefox_->grabImage(img_msg_);
+    img_msg_.header.stamp = ros::Time::now();
     image_publisher_.publish(img_msg_);
 };
 
