@@ -26,7 +26,7 @@
 #include "bluefox.h"
 
 #include "dynamic_reconfigure/server.h"
-#include "bluefox/bluefoxDynConfig.h"
+#include "bluefox_ros/bluefoxDynConfig.h"
 
 
 using namespace std;

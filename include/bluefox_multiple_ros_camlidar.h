@@ -26,7 +26,7 @@
 #include "bluefox.h"
 
 #include "dynamic_reconfigure/server.h"
-#include "bluefox/bluefoxDynConfig.h"
+#include "bluefox_ros/bluefoxDynConfig.h"
 
 #include <camlidar_module/trg_msg.h> // custom message
 

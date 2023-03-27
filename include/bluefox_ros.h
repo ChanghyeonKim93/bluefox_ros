@@ -27,7 +27,7 @@
 #include "bluefox.h"
 
 #include "dynamic_reconfigure/server.h"
-#include "bluefox/bluefoxDynConfig.h"
+#include "bluefox_ros/bluefoxDynConfig.h"
 
 
 using namespace std;
@@ -72,8 +72,7 @@ public:
     ~BlueFOX_ROS();
 
     void Publish();
-    void callbackDynReconfig(bluefox::bluefoxDynConfig &config, uint32_t lvl);
-
+    void callbackDynReconfig(bluefox_ros::bluefoxDynConfig &config, uint32_t lvl);
 
 private:
     mvIMPACT::acquire::DeviceManager devMgr_; // Manager for all devices.
@@ -88,8 +87,8 @@ private:
     image_transport::Publisher image_publisher_;
     sensor_msgs::Image img_msg_;
 
-    dynamic_reconfigure::Server<bluefox::bluefoxDynConfig> server;
-    dynamic_reconfigure::Server<bluefox::bluefoxDynConfig>::CallbackType f;
+    dynamic_reconfigure::Server<bluefox_ros::bluefoxDynConfig> server;
+    dynamic_reconfigure::Server<bluefox_ros::bluefoxDynConfig>::CallbackType f;
 };
 
 /* IMPLEMENTATION */
@@ -105,7 +104,7 @@ void BlueFOX_ROS::Publish() {
 };
 
 
-void BlueFOX_ROS::callbackDynReconfig(bluefox::bluefoxDynConfig &config, uint32_t lvl) {
+void BlueFOX_ROS::callbackDynReconfig(bluefox_ros::bluefoxDynConfig &config, uint32_t lvl) {
     if(config.hdr){
         bluefox_->setHighDynamicRange(true);
         cout << " DYNRECONFIG HDR:" <<  config.hdr << "\n";

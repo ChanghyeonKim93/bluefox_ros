@@ -1,10 +1,7 @@
 #include <iostream>
 #include <ros/ros.h>
 
-#include "bluefox_multiple_ros_thread.h"
-#include "dynamic_reconfigure/server.h"
-#include "bluefox/bluefoxDynConfig.h"
-
+#include "bluefox_ros.h"
 
 // trigger pin = digIn0+
 // trigger ground level is same with the Arduino ground level.
@@ -12,19 +9,21 @@
 // TODO: multiple cameras setting is not supported yet .. T.T
 int main(int argc, char **argv) {
     std::cout << "BlueFOX node is running..." << std::endl;
-    ros::init(argc, argv, "bluefox_multiple_node");
+    ros::init(argc, argv, "bluefox_node");
 
     ros::NodeHandle nh("~");
 
     bool binning_on   = false;
-    bool software_binning_on = true;
+    bool software_binning_on = false;
     int software_binning_level = 1;
-    bool triggered_on = true;
+    bool triggered_on = false;
     bool aec_on       = false; // auto exposure control on / off
     bool agc_on       = false; // auto gain control on / off
     bool hdr_on       = false;
     int expose_us     = 11000; // it is also max. exposure for auto exposure control.
     double frame_rate = 60.0; // frame rate (full resolution: up to 30 Hz)
+    int cam_id = 1;
+    string serial = "25003729";
 
     ros::param::get("~binning_on", binning_on);
     ros::param::get("~software_binning_on", software_binning_on);
@@ -35,20 +34,24 @@ int main(int argc, char **argv) {
     ros::param::get("~hdr_on", hdr_on);
 	ros::param::get("~expose_us", expose_us);
     ros::param::get("~frame_rate", frame_rate);
+    ros::param::get("~cam_id", cam_id);
+    ros::param::get("~serial", serial);
 
-    BlueFOX_MULTIPLE_ROS_THREAD *bluefoxs = 
-        new BlueFOX_MULTIPLE_ROS_THREAD(nh, binning_on,software_binning_on,software_binning_level, triggered_on, 
-        aec_on, agc_on, hdr_on, expose_us, frame_rate);
+    std::cout << "trigger? : " << triggered_on << std::endl;
+
+    BlueFOX_ROS *bluefox = 
+        new BlueFOX_ROS(nh, binning_on,software_binning_on,software_binning_level, triggered_on, 
+        aec_on, agc_on, hdr_on, expose_us, frame_rate, cam_id, serial);
     
-    ros::Rate rate(5); // ROS Rate at 5Hz
+    ros::Rate rate(2000);
     while(ros::ok())
     {
+	    bluefox->Publish();
         ros::spinOnce();
-	    bluefoxs->Publish();
         rate.sleep();
     }
 
-    delete bluefoxs;
+    delete bluefox;
     ROS_INFO_STREAM("Cease cameras.\n");
     return -1;
 };

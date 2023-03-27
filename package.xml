@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package>
-  <name>bluefox</name>
+  <name>bluefox_ros</name>
   <version>0.0.0</version>
-  <description>This is the bluefox package</description>
+  <description>This is the bluefox_ros package</description>
 
   <maintainer email="hyun91015@gmail.com">Changhyeon Kim</maintainer>
   <license>TODO</license>
