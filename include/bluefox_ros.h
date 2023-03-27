@@ -65,7 +65,7 @@ public:
         // server.setCallback(f);
 
         cout << "Please wait for setting cameras...\n";
-        // ros::Duration(0.5).sleep();
+        ros::Duration(0.5).sleep();
         cout << "camera setting is done.\n";
     }; 
 

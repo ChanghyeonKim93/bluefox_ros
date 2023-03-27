@@ -2,9 +2,7 @@
 #include <ros/ros.h>
 
 #include "bluefox_multiple_ros.h"
-#include "dynamic_reconfigure/server.h"
-#include "bluefox/bluefoxDynConfig.h"
-
+#include "bluefox_ros/bluefoxDynConfig.h"
 
 // trigger pin = digIn0+
 // trigger ground level is same with the Arduino ground level.

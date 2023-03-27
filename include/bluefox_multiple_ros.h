@@ -68,7 +68,7 @@ public:
     ~BlueFOX_MULTIPLE_ROS();
 
     void Publish();
-    void callbackDynReconfig(bluefox::bluefoxDynConfig &config, uint32_t lvl);
+    void callbackDynReconfig(bluefox_ros::bluefoxDynConfig &config, uint32_t lvl);
 
 
 private:
@@ -89,8 +89,8 @@ private:
     ros::Subscriber sub_msg_;
     std_msgs::Int32 msg_;
 
-    dynamic_reconfigure::Server<bluefox::bluefoxDynConfig> server;
-    dynamic_reconfigure::Server<bluefox::bluefoxDynConfig>::CallbackType f;
+    dynamic_reconfigure::Server<bluefox_ros::bluefoxDynConfig> server;
+    dynamic_reconfigure::Server<bluefox_ros::bluefoxDynConfig>::CallbackType f;
 };
 
 /* IMPLEMENTATION */
@@ -111,7 +111,7 @@ void BlueFOX_MULTIPLE_ROS::Publish() {
 };
 
 
-void BlueFOX_MULTIPLE_ROS::callbackDynReconfig(bluefox::bluefoxDynConfig &config, uint32_t lvl) {
+void BlueFOX_MULTIPLE_ROS::callbackDynReconfig(bluefox_ros::bluefoxDynConfig &config, uint32_t lvl) {
     if(config.hdr){
         for(int i = 0; i < n_devs_; i++)
             bluefoxs_[i]->setHighDynamicRange(true);
